@@ -397,22 +397,22 @@ Options:
  -0    Enable 0CC-FT effects (Lxx / Oxx / Txy) from FTMs
        Do NOT use this option for FTMs saved with 0.5.0 beta!
  -A    Treat channel volume as-is rather than as note velocity
- -Cx;y Map channel x to MIDI channel y (0 - 15)
- -Dx;y Map DPCM sample x to MIDI percussion note y (0 - 127)
+ -Cx,y Map channel x to MIDI channel y (0 - 15)
+ -Dx,y Map DPCM sample x to MIDI percussion note y (0 - 127)
  -I    Add time signatures to output
  -Kx   Set the number of MIDI ticks per quarter note to x (default 96)
  -Lx   Export the track up to x loops (default 2)
  -Mx   Set the time multiplier to x
  -mx   Divide the time multiplier by x
- -Nx;y Map instrument x on the noise channel to MIDI percussion note y
+ -Nx,y Map instrument x on the noise channel to MIDI percussion note y
  -O x  Rename the output file to x
- -Px;y Assign instrument x to MIDI instrument y (0 - 127)
+ -Px,y Assign instrument x to MIDI instrument y (0 - 127)
  -px   Treat DPCM sample x as melodic note
  -R    Do not treat note release as note off
  -Tx   Export track x (default 1)
- -Vx;y Set the volume of chip x to y (0 - 127)
-       x: 0->2A03; 1->VRC6; 2->VRC7; 4->FDS; 8->MMC5; 16->N163; 32->5B
- -vx;y Set the volume of channel x to y (0 - 127)
+ -Vx,y Set the volume of chip x to y (0 - 127)
+       x: 0->2A03, 1->VRC6, 2->VRC7, 4->FDS, 8->MMC5, 16->N163, 32->5B
+ -vx,y Set the volume of channel x to y (0 - 127)
  -Yx   Recognize instrument x as tie notes
  -Z    Force notes to use non-zero velocity and volume]])
  --[[;-Sx;y Split instrument y from channel x to a separate track]]
@@ -504,7 +504,7 @@ else
   for i = 2, #arg do 
     if string.sub(arg[i], 1, 1) == "-" then
       local option = string.sub(arg[i], 2, 2)
-      local t = split(string.sub(arg[i], 3), ";")
+      local t = split(string.sub(arg[i], 3), ",")
       if func[option] then
         func[option](t)
       else
