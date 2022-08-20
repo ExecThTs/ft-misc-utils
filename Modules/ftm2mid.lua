@@ -203,13 +203,20 @@ FTM2MIDI = function (setting)
       end
       if length > 0 then
         
-        local noteBeginningVolumeOverride
+        local noteBeginningVolumeOverride, noteAverageVolumeOverride
         if setting.treatOptions then
           noteBeginningVolumeOverride = -1 
+          noteAverageVolumeOverride = -1 
           for _,v in pairs(setting.treatOptions) do
             if (v.class=="i" and v.selectedId == cInst[ch]) then 
               if (v.mode=="notebeginning") then 
                 noteBeginningVolumeOverride = (128/16)*ins.seq[1][1]
+              elseif (v.mode=="noteaverage") then
+                local totalVol = 0
+                for _,instrVolTick in pairs(ins.seq[1]) do
+                  totalVol = totalVol + instrVolTick
+                end
+                noteAverageVolumeOverride = (128/16)*(totalVol/#ins.seq[1])
               end
             end
           end
@@ -218,6 +225,7 @@ FTM2MIDI = function (setting)
         local volume = 
           setting.swap and cMix[ch] 
           or noteBeginningVolumeOverride and noteBeginningVolumeOverride>-1 and noteBeginningVolumeOverride
+          or noteAverageVolumeOverride and noteAverageVolumeOverride>-1 and noteAverageVolumeOverride
           or cVel[ch]
         if volume > 0 then
           for k in pairs(arpTable) do if k ~= "x" and k ~= "y" then
@@ -431,6 +439,7 @@ Options:
  -vx,y Set the volume of channel x to y (0 - 127)
  -X,.. Treat instrument, channel, and note volume as the following:
    X,ix,nb  Treat beginning of instrument x volume as note velocity
+   X,ix,na  Treat instrument x average volume as note velocity
  -Yx   Recognize instrument x as tie notes
  -Z    Force notes to use non-zero velocity and volume]])
  --[[;-Sx;y Split instrument y from channel x to a separate track]]
@@ -513,6 +522,7 @@ else
     func.X = function (t)
       setting.treatOptions = setting.treatOptions or {}
       local newClass, newSelectedId = string.gmatch(t[2], "([c|i])(%d+)")()
+      if newClass == nil or newSelectedId == nil then error("Missing parameter for -X") end
       if t[3] == "c" then
         error("Unrecognized option -X" .. table.concat(t,",")) -- Not yet implemented
       elseif t[3] == "n" then
@@ -520,11 +530,7 @@ else
       elseif t[3] == "nb" then
         table.insert(setting.treatOptions, {class=newClass, selectedId=tonumber(newSelectedId), mode="notebeginning"})
       elseif t[3] == "na" then
-        error("Unrecognized option -X" .. table.concat(t,","))
-      end
-      print("called: ",newClass, newSelectedId, t[3]) -- debug 
-      for k,v in pairs(setting.treatOptions) do
-        print(k,v.class,v.selectedId,v.mode)
+        table.insert(setting.treatOptions, {class=newClass, selectedId=tonumber(newSelectedId), mode="noteaverage"})
       end
     end
     func.Y = function (t)
