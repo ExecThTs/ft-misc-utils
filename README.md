@@ -36,7 +36,7 @@ Scripts that only display technical information and do not process files.
 
 ### Modules
 
-Scripts that read or write 0CC or FTM modules. They require [this](https://github.com/HertzDevil/luaFTM) fairly incomplete Lua library I made.
+Scripts that read or write 0CC or FTM modules.
 
 - `0cc_0xy`: Converts instruments using arpeggio schemes into individual instruments and arpeggio sequences. The actual 0xy commands themselves are unaffected.
 - `0cc_inst`: Clones instruments as necessary such that each channel only uses instruments for the sound chip it belongs to.
@@ -46,3 +46,15 @@ Scripts that read or write 0CC or FTM modules. They require [this](https://githu
 - `obfusc`: Shuffles all the rows of a given module, while placing Dxx commands throughout the module to maintain the row ordering.
 
 All these scripts are licensed with the MIT License where unspecified otherwise.
+
+### Requirements
+
+- These scripts usually run most comfortably in a Linux shell but will work in any environment that can run a Lua/Ruby interpreter.  
+
+- FTM/0CC module reader/writer scripts require [this](https://github.com/HertzDevil/luaFTM) fairly incomplete Lua library I made. (The folder must be put into the `Modules/` folder.)
+
+- For Lua scripts, the installation of [LuaRocks](https://github.com/luarocks/luarocks) ([installation instructions](https://github.com/luarocks/luarocks/wiki/Installation-instructions-for-Unix)) is highly recommended, along with the following packages:  
+
+```  
+sudo luarocks install --local midi  
+```  
