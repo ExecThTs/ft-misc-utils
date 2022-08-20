@@ -56,5 +56,5 @@ All these scripts are licensed with the MIT License where unspecified otherwise.
 - For Lua scripts, the installation of [LuaRocks](https://github.com/luarocks/luarocks) ([installation instructions](https://github.com/luarocks/luarocks/wiki/Installation-instructions-for-Unix)) is highly recommended, along with the following packages:  
 
 ```  
-sudo luarocks install --local midi  
+luarocks install --local midi  
 ```  
