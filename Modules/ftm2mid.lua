@@ -202,7 +202,23 @@ FTM2MIDI = function (setting)
         end
       end
       if length > 0 then
-        local volume = setting.swap and cMix[ch] or cVel[ch]
+        
+        local noteBeginningVolumeOverride
+        if setting.treatOptions then
+          noteBeginningVolumeOverride = -1 
+          for _,v in pairs(setting.treatOptions) do
+            if (v.class=="i" and v.selectedId == cInst[ch]) then 
+              if (v.mode=="notebeginning") then 
+                noteBeginningVolumeOverride = (128/16)*ins.seq[1][1]
+              end
+            end
+          end
+        end
+
+        local volume = 
+          setting.swap and cMix[ch] 
+          or noteBeginningVolumeOverride and noteBeginningVolumeOverride>-1 and noteBeginningVolumeOverride
+          or cVel[ch]
         if volume > 0 then
           for k in pairs(arpTable) do if k ~= "x" and k ~= "y" then
             if (ch ~= 5 or Dt and setting.DPCMmap[Dt.id] ~= false) and
@@ -413,6 +429,8 @@ Options:
  -Vx,y Set the volume of chip x to y (0 - 127)
        x: 0->2A03, 1->VRC6, 2->VRC7, 4->FDS, 8->MMC5, 16->N163, 32->5B
  -vx,y Set the volume of channel x to y (0 - 127)
+ -X,.. Treat instrument, channel, and note volume as the following:
+   X,ix,nb  Treat beginning of instrument x volume as note velocity
  -Yx   Recognize instrument x as tie notes
  -Z    Force notes to use non-zero velocity and volume]])
  --[[;-Sx;y Split instrument y from channel x to a separate track]]
@@ -491,6 +509,23 @@ else
     end
     func.v = function (t)
       setting.volume[int(t[1])] = int(t[2])
+    end
+    func.X = function (t)
+      setting.treatOptions = setting.treatOptions or {}
+      local newClass, newSelectedId = string.gmatch(t[2], "([c|i])(%d+)")()
+      if t[3] == "c" then
+        error("Unrecognized option -X" .. table.concat(t,",")) -- Not yet implemented
+      elseif t[3] == "n" then
+        error("Unrecognized option -X" .. table.concat(t,","))
+      elseif t[3] == "nb" then
+        table.insert(setting.treatOptions, {class=newClass, selectedId=tonumber(newSelectedId), mode="notebeginning"})
+      elseif t[3] == "na" then
+        error("Unrecognized option -X" .. table.concat(t,","))
+      end
+      print("called: ",newClass, newSelectedId, t[3]) -- debug 
+      for k,v in pairs(setting.treatOptions) do
+        print(k,v.class,v.selectedId,v.mode)
+      end
     end
     func.Y = function (t)
       setting.tie[int(t[1])] = true
