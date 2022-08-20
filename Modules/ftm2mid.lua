@@ -437,8 +437,7 @@ else
     chipVolume = {},
     channel = {},
   }
-  for i = 2, #arg do
-    local func = {}
+  local func = {}
     func.A = function (t)
       setting.swap = true
     end
@@ -502,6 +501,7 @@ else
     func["0"] = function (t)
       setting.use0CCfx = true
     end
+  for i = 2, #arg do 
     if string.sub(arg[i], 1, 1) == "-" then
       local option = string.sub(arg[i], 2, 2)
       local t = split(string.sub(arg[i], 3), ";")
