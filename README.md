@@ -1,6 +1,6 @@
 ## FT-Misc-Utils
 
-A collection of (almost) all the miscellaneous Lua / Ruby scripts I wrote for various FamiTracker / 0CC-FamiTracker utilities.
+A collection of (almost) all the miscellaneous Lua / Ruby scripts [HertzDevil](https://github.com/HertzDevil) wrote for various FamiTracker / 0CC-FamiTracker utilities.
 
 Some of the Lua scripts will only run on Lua 5.3. Most of them are originally for personal use only, and may differ largely in style; in particular do not expect any comments or help text in them.
 
@@ -41,7 +41,7 @@ Scripts that read or write 0CC or FTM modules.
 - `0cc_0xy`: Converts instruments using arpeggio schemes into individual instruments and arpeggio sequences. The actual 0xy commands themselves are unaffected.
 - `0cc_inst`: Clones instruments as necessary such that each channel only uses instruments for the sound chip it belongs to.
 - `0cc_Lxx`: Converts delayed note release effect commands into note releases plus Gxx commands.
-- `ftm2mid`: Converts a module into a standard MIDI file, translating most effect commands into MIDI equivalents.
+- [`ftm2mid`](https://github.com/ExecThTs/ft-misc-utils/wiki/ftm2mid): Converts a module into a standard MIDI file, translating most effect commands into MIDI equivalents.
 - `n163check`: Scans through the songs of a given module and reports all unique combinations of simultaneously used N163 instruments.
 - `obfusc`: Shuffles all the rows of a given module, while placing Dxx commands throughout the module to maintain the row ordering.
 
@@ -51,7 +51,7 @@ All these scripts are licensed with the MIT License where unspecified otherwise.
 
 - These scripts usually run most comfortably in a Linux shell but will work in any environment that can run a Lua/Ruby interpreter.  
 
-- FTM/0CC module reader/writer scripts require [this](https://github.com/HertzDevil/luaFTM) fairly incomplete Lua library I made. (The folder must be put into the `Modules/` folder.)
+- FTM/0CC module reader/writer scripts require [this](https://github.com/HertzDevil/luaFTM) fairly incomplete Lua library [HertzDevil](https://github.com/HertzDevil) made. (The folder must be put into the `Modules/` folder.)
 
 - For Lua scripts, the installation of [LuaRocks](https://github.com/luarocks/luarocks) ([installation instructions](https://github.com/luarocks/luarocks/wiki/Installation-instructions-for-Unix)) is highly recommended, along with the following packages:  
 
