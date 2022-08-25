@@ -507,6 +507,7 @@ Options:
 ]]..--[[   X,ix,pw   Feed pulse width setting into MIDI CC 12 (Effect 1)]][[
  ✓ Multiple -X are accepted.
  ✓ Adding an 'o' after an instrument option (-Xo,ix,..) will override the note velocity 
+ ✓ Leaving 'x' as the instrument/channel number will make the setting apply to all of them!
     rather than mixing with channel volume (previous default)
  -Yx   Recognize instrument x as tie notes
  -Z    Force notes to use non-zero velocity and volume]])
@@ -589,12 +590,18 @@ else
     end
     func.X = function (t)
       setting.treatOptions = setting.treatOptions or {}
-      local newClass, newSelectedId = string.gmatch(t[2], "([c|i])(%d+)")()
+      local newClass, newSelectedId = string.gmatch(t[2], "([c|i])(%w+)")()
       local overrideNoteVolume = false
       if newClass == nil or newSelectedId == nil then error("Missing parameter for -X") end
       --print (t[1], t[2], t[3])
       if newClass == "i" and t[1] == "o" then
         newOverrideNoteVolume = true
+      end
+
+      if (newSelectedId=="x") then 
+        newSelectedId=-1 
+      elseif (tonumber(newSelectedId)==nil) then
+        error("Unrecognized option -X" .. table.concat(t,","))
       end
       
       if t[3] == "nb" then
