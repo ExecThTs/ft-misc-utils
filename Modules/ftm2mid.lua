@@ -235,14 +235,15 @@ FTM2MIDI = function (setting)
             if (v.class=="i" and (v.selectedId == cInst[ch] or v.selectedId == -1)) then 
               if (ins.seq[1]) then -- if a volume sequence exists, otherwise ignore
                 overrideNoteVolume = v.overrideNoteVolume
+                local stepSize = ins.seq[1].mode == 0 and 16 or 64
                 if (v.mode=="notebeginning") then 
-                  noteBeginningExtraVolume = (128/16)*ins.seq[1][1] -- NES to midi velocity
+                  noteBeginningExtraVolume = (128/stepSize)*ins.seq[1][1] -- NES to midi velocity
                 elseif (v.mode=="noteaverage") then
                   local totalVol = 0
                   for _,instrVolTick in pairs(ins.seq[1]) do
                     totalVol = totalVol + instrVolTick
                   end
-                  noteAverageExtraVolume = (128/16)*(totalVol/#ins.seq[1]) -- NES to midi velocity
+                  noteAverageExtraVolume = (128/stepSize)*(totalVol/#ins.seq[1]) -- NES to midi velocity
                 elseif (v.mode=="adsr") then
                   local loop = ins.seq[1].loop
                   local release = ins.seq[1].release
@@ -272,7 +273,7 @@ FTM2MIDI = function (setting)
                   end
                   assert(adsrMatchedExtraVolume~=nil, "adsrMatchedExtraVolume is nil! slope="..slope.." i="..i.." #ins.seq[1]="..#ins.seq[1])
                   log(l.debug, "CH"..ch..", instr"..cInst[ch]..": slope=", slope, "adsrMatchedExtraVolume=",adsrMatchedExtraVolume)
-                  adsrMatchedExtraVolume = (128/16)*adsrMatchedExtraVolume -- NES to midi velocity
+                  adsrMatchedExtraVolume = (128/stepSize)*adsrMatchedExtraVolume -- NES to midi velocity
                 end
               end
             end
