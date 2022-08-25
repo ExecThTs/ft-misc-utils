@@ -41,7 +41,7 @@ Scripts that read or write 0CC or FTM modules.
 - `0cc_0xy`: Converts instruments using arpeggio schemes into individual instruments and arpeggio sequences. The actual 0xy commands themselves are unaffected.
 - `0cc_inst`: Clones instruments as necessary such that each channel only uses instruments for the sound chip it belongs to.
 - `0cc_Lxx`: Converts delayed note release effect commands into note releases plus Gxx commands.
-- `ftm2mid`: Converts a module into a standard MIDI file, translating most effect commands into MIDI equivalents.
+- [`ftm2mid`](https://github.com/ExecThTs/ft-misc-utils/wiki/ftm2mid): Converts a module into a standard MIDI file, translating most effect commands into MIDI equivalents.
 - `n163check`: Scans through the songs of a given module and reports all unique combinations of simultaneously used N163 instruments.
 - `obfusc`: Shuffles all the rows of a given module, while placing Dxx commands throughout the module to maintain the row ordering.
 
