@@ -203,20 +203,65 @@ FTM2MIDI = function (setting)
       end
       if length > 0 then
         
-        local noteBeginningVolumeOverride, noteAverageVolumeOverride
+        local noteBeginningExtraVolume, noteAverageExtraVolume, adsrMatchedExtraVolume, overrideNoteVolume
         if setting.treatOptions then
-          noteBeginningVolumeOverride = -1 
-          noteAverageVolumeOverride = -1 
+          noteBeginningExtraVolume = -1 
+          noteAverageExtraVolume = -1 
+          adsrMatchedExtraVolume = -1
+          overrideNoteVolume = false
+          
+          --print("CH"..ch..", instr"..cInst[ch]..": ")
+          --[[for k,v in pairs(ins) do
+            print(k,v)
+          end]]
+          --[[for k,v in pairs(ins.seq[1] or {}) do
+            print(cInst[ch],k,v)
+          end]]
+
           for _,v in pairs(setting.treatOptions) do
-            if (v.class=="i" and v.selectedId == cInst[ch]) then 
-              if (v.mode=="notebeginning") then 
-                noteBeginningVolumeOverride = (128/16)*ins.seq[1][1]
-              elseif (v.mode=="noteaverage") then
-                local totalVol = 0
-                for _,instrVolTick in pairs(ins.seq[1]) do
-                  totalVol = totalVol + instrVolTick
+            if (v.class=="i" and (v.selectedId == cInst[ch])) then 
+              if (ins.seq[1]) then -- if a volume sequence exists, otherwise ignore
+                overrideNoteVolume = v.overrideNoteVolume
+                if (v.mode=="notebeginning") then 
+                  noteBeginningExtraVolume = (128/16)*ins.seq[1][1] -- NES to midi velocity
+                elseif (v.mode=="noteaverage") then
+                  local totalVol = 0
+                  for _,instrVolTick in pairs(ins.seq[1]) do
+                    totalVol = totalVol + instrVolTick
+                  end
+                  noteAverageExtraVolume = (128/16)*(totalVol/#ins.seq[1]) -- NES to midi velocity
+                elseif (v.mode=="adsr") then
+                  local loop = ins.seq[1].loop
+                  local release = ins.seq[1].release
+                  --print("loop:",loop,"release:",release)
+
+                  local startPosition = (loop and loop+1) or 2 -- find middle section of volume sequence 
+                  local endPosition = (release or #ins.seq[1]) -- and offset by 1 for next-element-search
+                  --print("CH"..ch..", instr"..cInst[ch]..": ", "startPosition="..startPosition, "endPosition="..endPosition)
+                  local i = startPosition
+
+                  local slope = 0 
+                  local totalVol = ins.seq[1][i-1] -- in case of zero volume
+                  while (i<endPosition+1) do
+                    slope = slope+(ins.seq[1][i]-ins.seq[1][i-1])
+                    totalVol = totalVol + ins.seq[1][i]
+                    i=i+1
+                  end
+                  i=i-1 -- reset offset
+                  slope=slope/(endPosition-startPosition)
+                  --print("start:"..startPosition..", end:"..endPosition..", last i:"..i)
+                  if (slope>0) then -- attack type, use the end of the period
+                    adsrMatchedExtraVolume = ins.seq[1][endPosition]
+                  else -- decay/sustain type, use the beginning of the period
+                    adsrMatchedExtraVolume = ins.seq[1][startPosition-1]
+                  end
+                  if adsrMatchedExtraVolume == 0 then -- weird volume sequence, use average instead
+                    adsrMatchedExtraVolume = totalVol / (#ins.seq[1]) 
+                  end
+                  assert(adsrMatchedExtraVolume~=nil, "adsrMatchedExtraVolume is nil! slope="..slope.." i="..i.." #ins.seq[1]="..#ins.seq[1])
+                  --print("CH"..ch..", instr"..cInst[ch]..": slope=", slope, "adsrMatchedExtraVolume=",adsrMatchedExtraVolume)
+                  adsrMatchedExtraVolume = (128/16)*adsrMatchedExtraVolume -- NES to midi velocity
                 end
-                noteAverageVolumeOverride = (128/16)*(totalVol/#ins.seq[1])
               end
             end
           end
@@ -224,9 +269,21 @@ FTM2MIDI = function (setting)
 
         local volume = 
           setting.swap and cMix[ch] 
-          or noteBeginningVolumeOverride and noteBeginningVolumeOverride>-1 and noteBeginningVolumeOverride
-          or noteAverageVolumeOverride and noteAverageVolumeOverride>-1 and noteAverageVolumeOverride
           or cVel[ch]
+        --print(volume)
+        if ((noteBeginningExtraVolume and noteBeginningExtraVolume>-1) or (noteAverageExtraVolume and noteAverageExtraVolume>-1) or (adsrMatchedExtraVolume and adsrMatchedExtraVolume>-1)) then
+          --if ch==1 then
+          --print("[CH"..ch.."] note velocity from instrument volume triggered:")
+          --print("[CH"..ch.."] original volume: "..volume)
+          --end
+          volume = (overrideNoteVolume and 1 or (volume/128.0)) * (noteBeginningExtraVolume>-1 and noteBeginningExtraVolume
+            or noteAverageExtraVolume>-1 and noteAverageExtraVolume
+            or adsrMatchedExtraVolume>-1 and adsrMatchedExtraVolume
+            )
+          if ch==1 then
+          --print("[CH"..ch.."] new volume: "..volume)
+          end
+        end
         if volume > 0 then
           for k in pairs(arpTable) do if k ~= "x" and k ~= "y" then
             if (ch ~= 5 or Dt and setting.DPCMmap[Dt.id] ~= false) and
@@ -438,8 +495,18 @@ Options:
        x: 0->2A03, 1->VRC6, 2->VRC7, 4->FDS, 8->MMC5, 16->N163, 32->5B
  -vx,y Set the volume of channel x to y (0 - 127)
  -X,.. Treat instrument, channel, and note volume as the following:
-   X,ix,nb  Treat beginning of instrument x volume as note velocity
-   X,ix,na  Treat instrument x average volume as note velocity
+   X,ix,adsr ADSR modelling.
+               Uses the middle section starting/ending volume, depending on the volume slope.
+               A volume loop or a level before a release will be considered if either exists. 
+               Otherwise uses starting volume if the volume sequence is 'descending' (decay-sustain/release), 
+                ending volume if the volume sequence is 'ascending' (attack).
+               If the resulting velocity would be zero then the average of the middle section will be taken.
+   X,ix,nb   Treat beginning of instrument x volume as note velocity
+   X,ix,na   Treat instrument x average volume as note velocity
+]]..--[[   X,ix,pw   Feed pulse width setting into MIDI CC 12 (Effect 1)]][[
+ ✓ Multiple -X are accepted.
+ ✓ Adding an 'o' after an instrument option (-Xo,ix,..) will override the note velocity 
+    rather than mixing with channel volume (previous default)
  -Yx   Recognize instrument x as tie notes
  -Z    Force notes to use non-zero velocity and volume]])
  --[[;-Sx;y Split instrument y from channel x to a separate track]]
@@ -522,15 +589,21 @@ else
     func.X = function (t)
       setting.treatOptions = setting.treatOptions or {}
       local newClass, newSelectedId = string.gmatch(t[2], "([c|i])(%d+)")()
+      local overrideNoteVolume = false
       if newClass == nil or newSelectedId == nil then error("Missing parameter for -X") end
-      if t[3] == "c" then
-        error("Unrecognized option -X" .. table.concat(t,",")) -- Not yet implemented
-      elseif t[3] == "n" then
-        error("Unrecognized option -X" .. table.concat(t,","))
-      elseif t[3] == "nb" then
-        table.insert(setting.treatOptions, {class=newClass, selectedId=tonumber(newSelectedId), mode="notebeginning"})
+      --print (t[1], t[2], t[3])
+      if newClass == "i" and t[1] == "o" then
+        newOverrideNoteVolume = true
+      end
+      
+      if t[3] == "nb" then
+        table.insert(setting.treatOptions, {class=newClass, selectedId=tonumber(newSelectedId), mode="notebeginning", overrideNoteVolume = newOverrideNoteVolume})
       elseif t[3] == "na" then
-        table.insert(setting.treatOptions, {class=newClass, selectedId=tonumber(newSelectedId), mode="noteaverage"})
+        table.insert(setting.treatOptions, {class=newClass, selectedId=tonumber(newSelectedId), mode="noteaverage", overrideNoteVolume = newOverrideNoteVolume})
+      elseif t[3] == "adsr" then
+        table.insert(setting.treatOptions, {class=newClass, selectedId=tonumber(newSelectedId), mode="adsr", overrideNoteVolume = newOverrideNoteVolume})
+      else
+        error("Unrecognized option -X" .. table.concat(t,","))
       end
     end
     func.Y = function (t)
