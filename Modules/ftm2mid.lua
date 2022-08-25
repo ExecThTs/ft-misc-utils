@@ -24,7 +24,8 @@ FTM2MIDI = function (setting)
     end})
   end
 
-  local ftm = FTM:loadFTM(string.gsub(setting.fname, "%.ftm$", "") .. ".ftm")
+  local ftm = FTM:loadFTM(setting.fname)
+
   if setting.track < 1 or setting.track > #ftm.track then
     kill("Track " .. setting.track .. " does not exist")
   end
