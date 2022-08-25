@@ -5,6 +5,17 @@ local MIDI = require "MIDI" -- http://www.pjb.com.au/comp/lua/MIDI.html
 
 local kill = function (str) print(str); os.exit(false) end
 
+local logLevels = {error=1, info=2, debug=3, debug2=4}
+local l=logLevels
+local defaultLogLevel = logLevels.error
+local settingG -- this is very hacky
+
+  local log = function(level, text, ...)
+    if settingG.logging.logLevel >= level then
+      print(text, select(1, ...))
+    end
+  end
+
 FTM2MIDI = function (setting)
   local trsp = {[CHIP.FDS] = -24, [CHIP.VRC7] = -12, [CHIP.S5B] = -12}
   local APUtrsp = {23, 23, 11, 23, 12}
@@ -211,16 +222,17 @@ FTM2MIDI = function (setting)
           adsrMatchedExtraVolume = -1
           overrideNoteVolume = false
           
-          --print("CH"..ch..", instr"..cInst[ch]..": ")
-          --[[for k,v in pairs(ins) do
-            print(k,v)
-          end]]
-          --[[for k,v in pairs(ins.seq[1] or {}) do
-            print(cInst[ch],k,v)
-          end]]
+          log(l.debug,"CH"..ch..", instr"..cInst[ch].." properties:")
+          for k,v in pairs(ins) do
+            log(l.debug,"", k,v)
+          end
+          log(l.debug2, "CH"..ch..", instr"..cInst[ch].." vol sequence:")
+          for k,v in pairs(ins.seq[1] or {}) do
+            log(l.debug2, "", cInst[ch],k,v)
+          end
 
           for _,v in pairs(setting.treatOptions) do
-            if (v.class=="i" and (v.selectedId == cInst[ch])) then 
+            if (v.class=="i" and (v.selectedId == cInst[ch] or v.selectedId == -1)) then 
               if (ins.seq[1]) then -- if a volume sequence exists, otherwise ignore
                 overrideNoteVolume = v.overrideNoteVolume
                 if (v.mode=="notebeginning") then 
@@ -234,11 +246,11 @@ FTM2MIDI = function (setting)
                 elseif (v.mode=="adsr") then
                   local loop = ins.seq[1].loop
                   local release = ins.seq[1].release
-                  --print("loop:",loop,"release:",release)
+                  log(l.debug, "CH"..ch..", instr"..cInst[ch].." loop:",loop,"release:",release)
 
                   local startPosition = (loop and loop+1) or 2 -- find middle section of volume sequence 
                   local endPosition = (release or #ins.seq[1]) -- and offset by 1 for next-element-search
-                  --print("CH"..ch..", instr"..cInst[ch]..": ", "startPosition="..startPosition, "endPosition="..endPosition)
+                  log(l.debug, "CH"..ch..", instr"..cInst[ch]..": ", "startPosition="..startPosition, "endPosition="..endPosition)
                   local i = startPosition
 
                   local slope = 0 
@@ -250,7 +262,6 @@ FTM2MIDI = function (setting)
                   end
                   i=i-1 -- reset offset
                   slope=slope/(endPosition-startPosition)
-                  --print("start:"..startPosition..", end:"..endPosition..", last i:"..i)
                   if (slope>0) then -- attack type, use the end of the period
                     adsrMatchedExtraVolume = ins.seq[1][endPosition]
                   else -- decay/sustain type, use the beginning of the period
@@ -260,7 +271,7 @@ FTM2MIDI = function (setting)
                     adsrMatchedExtraVolume = totalVol / (#ins.seq[1]) 
                   end
                   assert(adsrMatchedExtraVolume~=nil, "adsrMatchedExtraVolume is nil! slope="..slope.." i="..i.." #ins.seq[1]="..#ins.seq[1])
-                  --print("CH"..ch..", instr"..cInst[ch]..": slope=", slope, "adsrMatchedExtraVolume=",adsrMatchedExtraVolume)
+                  log(l.debug, "CH"..ch..", instr"..cInst[ch]..": slope=", slope, "adsrMatchedExtraVolume=",adsrMatchedExtraVolume)
                   adsrMatchedExtraVolume = (128/16)*adsrMatchedExtraVolume -- NES to midi velocity
                 end
               end
@@ -271,19 +282,14 @@ FTM2MIDI = function (setting)
         local volume = 
           setting.swap and cMix[ch] 
           or cVel[ch]
-        --print(volume)
         if ((noteBeginningExtraVolume and noteBeginningExtraVolume>-1) or (noteAverageExtraVolume and noteAverageExtraVolume>-1) or (adsrMatchedExtraVolume and adsrMatchedExtraVolume>-1)) then
-          --if ch==1 then
-          --print("[CH"..ch.."] note velocity from instrument volume triggered:")
-          --print("[CH"..ch.."] original volume: "..volume)
+          log(l.debug2, "CH"..ch..", instr"..cInst[ch].." original volume: "..volume)
           --end
           volume = (overrideNoteVolume and 1 or (volume/128.0)) * (noteBeginningExtraVolume>-1 and noteBeginningExtraVolume
             or noteAverageExtraVolume>-1 and noteAverageExtraVolume
             or adsrMatchedExtraVolume>-1 and adsrMatchedExtraVolume
             )
-          if ch==1 then
-          --print("[CH"..ch.."] new volume: "..volume)
-          end
+          log(l.debug2, "CH"..ch..", instr"..cInst[ch].." new volume: "..volume)
         end
         if volume > 0 then
           for k in pairs(arpTable) do if k ~= "x" and k ~= "y" then
@@ -423,10 +429,11 @@ FTM2MIDI = function (setting)
       end end
       if Gxx then d = d - Gxx end
     end
-    
+
     if not loop[mstr] then loop[mstr] = 0 end
     loop[mstr] = loop[mstr] + 1
     rv:step(true)
+    if (rv.frame==1 and rv.row==1) then log(l.info, "Loop #"..loop[mstr].." done") end
     local dtime = score[1] / 4 * (cSpeed == 0 and cGroove[1][cGroove[2]] / avgSpd() or 1)
     for ch = 1, chCount do
       if cAxy[ch] and cStateVel[ch] + cAxy[ch].dir <= 15 and cStateVel[ch] + cAxy[ch].dir >= 0 then
@@ -447,6 +454,7 @@ FTM2MIDI = function (setting)
       cGroove[2] = cGroove[2] % #cGroove[1] + 1
     end
   end
+  log(l.info, "Pattern data done")
   ::outer::
 
   d = math.floor(d + .5)
@@ -510,7 +518,8 @@ Options:
  ✓ Leaving 'x' as the instrument/channel number will make the setting apply to all of them!
     rather than mixing with channel volume (previous default)
  -Yx   Recognize instrument x as tie notes
- -Z    Force notes to use non-zero velocity and volume]])
+ -Z    Force notes to use non-zero velocity and volume
+ -z    Verbose, add more for increased verbosity (info, debug, debug2)]])
  --[[;-Sx;y Split instrument y from channel x to a separate track]]
 else
   local int = function (str)
@@ -532,6 +541,9 @@ else
     volume = {},
     chipVolume = {},
     channel = {},
+    logging = {
+      logLevel = defaultLogLevel
+    },
   }
   local func = {}
     func.A = function (t)
@@ -593,7 +605,7 @@ else
       local newClass, newSelectedId = string.gmatch(t[2], "([c|i])(%w+)")()
       local overrideNoteVolume = false
       if newClass == nil or newSelectedId == nil then error("Missing parameter for -X") end
-      --print (t[1], t[2], t[3])
+      log(l.debug, "-X volume treat input params:", t[1], t[2], t[3])
       if newClass == "i" and t[1] == "o" then
         newOverrideNoteVolume = true
       end
@@ -620,9 +632,19 @@ else
     func.Z = function (t)
       setting.nonzero = true
     end
+    func.z = function (t)
+      setting.logging.logLevel = setting.logging.logLevel + 1
+      for i=1,t[1]:len() do
+        if string.sub(t[1],i,i)=="z" then
+          setting.logging.logLevel = setting.logging.logLevel + 1
+        end
+      end
+      log(l.debug, "setting.logging.logLevel="..setting.logging.logLevel)
+    end
     func["0"] = function (t)
       setting.use0CCfx = true
     end
+    settingG=setting -- this is very hacky
   for i = 2, #arg do 
     if string.sub(arg[i], 1, 1) == "-" then
       local option = string.sub(arg[i], 2, 2)
