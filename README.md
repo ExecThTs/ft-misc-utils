@@ -1,6 +1,6 @@
 ## FT-Misc-Utils
 
-A collection of (almost) all the miscellaneous Lua / Ruby scripts I wrote for various FamiTracker / 0CC-FamiTracker utilities.
+A collection of (almost) all the miscellaneous Lua / Ruby scripts [HertzDevil](https://github.com/HertzDevil) wrote for various FamiTracker / 0CC-FamiTracker utilities.
 
 Some of the Lua scripts will only run on Lua 5.3. Most of them are originally for personal use only, and may differ largely in style; in particular do not expect any comments or help text in them.
 
@@ -51,7 +51,7 @@ All these scripts are licensed with the MIT License where unspecified otherwise.
 
 - These scripts usually run most comfortably in a Linux shell but will work in any environment that can run a Lua/Ruby interpreter.  
 
-- FTM/0CC module reader/writer scripts require [this](https://github.com/HertzDevil/luaFTM) fairly incomplete Lua library I made. (The folder must be put into the `Modules/` folder.)
+- FTM/0CC module reader/writer scripts require [this](https://github.com/HertzDevil/luaFTM) fairly incomplete Lua library [HertzDevil](https://github.com/HertzDevil) made. (The folder must be put into the `Modules/` folder.)
 
 - For Lua scripts, the installation of [LuaRocks](https://github.com/luarocks/luarocks) ([installation instructions](https://github.com/luarocks/luarocks/wiki/Installation-instructions-for-Unix)) is highly recommended, along with the following packages:  
 
